@@ -26,7 +26,7 @@ class PipeServingBot(irc.bot.SingleServerIRCBot):
    def on_welcome(self, connection, event):
       for channel in self.args.channel:
          connection.join(channel)
-      self.logger.debug('Joined IRC channels')
+      self.logger.info('Joined %d IRC channel(s)', len(self.args.channel))
 
       self.log_thread = LogServingThread(self.args, self)
       self.log_thread.daemon = True
@@ -40,6 +40,7 @@ class LogServingThread(threading.Thread):
       self.bot = bot
 
    def run(self):
+      self.logger.info('Starting to send pipe to IRC')
       while True:
          self.logger.debug('Reopening input pipe')
          with open(args.pipe) as handle:
@@ -60,17 +61,24 @@ parser.add_argument('--port', default=6667, help='port of the IRC server')
 parser.add_argument('--nick', required=True, help='nick to use on the IRC server')
 parser.add_argument('--channel', action='append', required=True, help='channel to join')
 parser.add_argument('--pipe', required=True, help='pipe to read from')
+parser.add_argument('--verbose', action='store_true', help='verbose output')
+parser.add_argument('--debug', action='store_true', help='debug output')
 
 args = parser.parse_args()
 if(not os.path.exists(args.pipe)):
-	sys.stderr.write("Pipe '%s' does not exist\n" % args.pipe)
+   sys.stderr.write("Pipe '%s' does not exist\n" % args.pipe)
+   sys.exit(1)
 
-# setup logging to syslog
-formatter = logging.Formatter("pipe2irc: %(name)s: %(message)s")
-handler = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_DAEMON)
-handler.setFormatter(formatter)
-logging.getLogger().addHandler(handler)
-logging.getLogger().setLevel(logging.DEBUG)
+# setup logging
+syslog_handler = logging.handlers.SysLogHandler(address='/dev/log', facility=logging.handlers.SysLogHandler.LOG_DAEMON)
+syslog_handler.setFormatter(logging.Formatter("pipe2irc: %(name)s: %(message)s"))
+output_logger = logging.getLogger('' if args.debug else 'pipe2irc')
+output_logger.setLevel(logging.DEBUG)
+output_logger.addHandler(syslog_handler)
+if (args.verbose):
+   verbose_handler = logging.StreamHandler(stream=sys.stderr)
+   verbose_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)-8s %(name)-20s %(message)s"))
+   output_logger.addHandler(verbose_handler)
 
 # run the bot
 PipeServingBot(args).start()
