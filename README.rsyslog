@@ -1,0 +1,25 @@
+To tunnel the syslog received by rsyslog to IRC, use the following setup:
+
+
+1. Create the pipe using the following tmpfiles.d(5) fragment:
+
+p       /run/syslog-irc 0770    root    root    -       -
+
+2. Let rsyslog write to the pipe using the following rsyslog.conf(5) fragment:
+
+*.*   |/run/syslog-irc
+
+3. Setup the pip2irc daemon, using the supplied pipe2irc.service file and a new
+   environment file /etc/default/pipe2irc:
+
+# The IRC server to join
+IRCSERVER="irc.somedomain"
+
+# The nick to use on the IRC server
+NICK="syslogbroadcast"
+
+# The channel to join
+CHANNEL="#syslog"
+
+# The pipe to read
+PIPE="/run/syslog-irc"

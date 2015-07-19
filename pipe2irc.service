@@ -1,0 +1,10 @@
+[Unit]
+Description=pipe2irc daemon
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/default/pipe2irc
+ExecStart=/usr/bin/pipe2irc --server $IRCSERVER --nick $NICK --channel $CHANNEL --pipe $PIPE
+
+[Install]
+WantedBy=multi-user.target
